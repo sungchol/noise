@@ -1,26 +1,5 @@
 "use strict";
 
-//접속할 서버주소 : 엄청중요함. 잘 작성할것..
-//나혼자 사용하려면 127.0.0.1:8000 을 적어준다
-//const API_BASE = "http://127.0.0.1:8000";
-
-//와이파이망(내부망)에서 다른사람 접속을 허용하게 하려면
-//[서버실행컴퓨터_아이피:내부포트(파이썬8000)]를 적어준다
-//const API_BASE = "http://192.168.2.217:8000";
-//const API_BASE = "http://192.168.2.188:8000";
-//const API_BASE = "http://192.168.0.82:8000";
-
-//인터넷에서 다른사람 접속을 허용하게 하려면
-//포트포워딩한 후 [서버실행컴퓨터_외부아이피:설정한 외부포트]를 적어준다
-//const API_BASE = "http://122.35.42.10:8080";
-//const API_BASE = "http://sungchol.tplinkdns.com:8080";
-//const API_BASE = "http://58.149.85.154:8000";
-
-// https로 등록하기
-// ps> Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "cloudflared.exe"
-// ps> cloudflared.exe tunnel --url http://localhost:8000
-const API_BASE = "https://drives-comedy-strange-stewart.trycloudflare.com";
-
 // 서버 오류를 상태 코드와 함께 전달하기 위한 오류 클래스
 class ApiError extends Error {
   constructor(status, message) {
