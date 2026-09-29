@@ -12,11 +12,12 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-
+print("Root", ROOT)
 
 def load_dotenv_simple(path: Path) -> None:
     """외부 패키지 없이 최소한의 .env 파싱만 지원한다 (KEY=VALUE, # 주석, 빈 줄)."""
     if not path.exists():
+        print("파일없다")
         return
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
