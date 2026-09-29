@@ -12,7 +12,6 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-print("Root", ROOT)
 
 def load_dotenv_simple(path: Path) -> None:
     """외부 패키지 없이 최소한의 .env 파싱만 지원한다 (KEY=VALUE, # 주석, 빈 줄)."""
@@ -29,8 +28,9 @@ def load_dotenv_simple(path: Path) -> None:
 
 
 load_dotenv_simple(ROOT / ".env")
-
+print(f"Root : {ROOT}")
 api_base = os.environ.get("API_BASE", "")
+print(f"api_base : {api_base}")
 out_path = ROOT / "config.js"
 out_path.write_text(f'window.API_BASE = "{api_base}";\n', encoding="utf-8")
 print(f"생성됨: {out_path}  (API_BASE={api_base or '(비어 있음)'})")
