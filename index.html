@@ -1,0 +1,102 @@
+﻿<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>노이즈 필터링 비교</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <h1>이미지 목록</h1>
+        <p class="hint">이미지를 선택하면 처리가 순서대로 진행된다.</p>
+        <ul class="image-list" id="imageList"></ul>
+        <div class="sidebar-actions">
+          <label
+            >이미지 추가
+            <input type="file" id="fileInput" accept="image/*" multiple />
+          </label>
+          <button type="button" id="fullscreenBtn">전체 화면</button>
+        </div>
+      </aside>
+
+      <section class="stage" data-area="original">
+        <header>
+          <span class="step">1</span>
+          <h2>원본 이미지</h2>
+          <span class="status" id="st-original">대기</span>
+        </header>
+        <div class="view">
+          <canvas id="cv-original" class="empty"></canvas>
+          <div class="placeholder">왼쪽 목록에서 이미지를 선택한다.</div>
+        </div>
+      </section>
+
+      <section class="stage" data-area="noisy">
+        <header>
+          <span class="step">2</span>
+          <h2>노이즈</h2>
+          <span>강도</span>
+          <select id="noiseStrength">
+            <option value="10" selected>10</option>
+            <option value="30">30</option>
+            <option value="50">50</option>
+            <option value="70">70</option>
+            <option value="80">80</option>
+          </select>
+          <span></span>
+          <span class="status" id="st-noisy">대기</span>
+        </header>
+        <div class="view">
+          <canvas id="cv-noisy" class="empty"></canvas>
+          <div class="placeholder">노이즈 적용 후 표시된다.</div>
+        </div>
+      </section>
+
+      <section class="stage" data-area="conventional">
+        <header>
+          <span class="step">3</span>
+          <h2>SMF_3x3</h2>
+          <span class="status" id="st-conventional">대기</span>
+        </header>
+        <div class="view">
+          <canvas id="cv-conventional" class="empty"></canvas>
+          <div class="placeholder">필터 적용 후 표시된다.</div>
+        </div>
+      </section>
+
+      <section class="stage" data-area="proposed">
+        <header>
+          <span class="step">4</span>
+          <h2>
+            <button
+              type="button"
+              id="proposedToggle"
+              class="filter-toggle"
+              aria-live="polite"
+            >
+              WMM_II
+            </button>
+          </h2>
+          <span class="status" id="st-proposed">대기</span>
+        </header>
+        <div class="view">
+          <canvas id="cv-proposed" class="empty"></canvas>
+          <div class="placeholder">필터 적용 후 표시된다.</div>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="index.js" defer></script>
+  </body>
+</html>
