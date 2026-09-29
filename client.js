@@ -14,7 +14,12 @@
 //포트포워딩한 후 [서버실행컴퓨터_외부아이피:설정한 외부포트]를 적어준다
 //const API_BASE = "http://122.35.42.10:8080";
 //const API_BASE = "http://sungchol.tplinkdns.com:8080";
-const API_BASE = "http://58.149.85.154:8000";
+//const API_BASE = "http://58.149.85.154:8000";
+
+// https로 등록하기
+// ps> Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "cloudflared.exe"
+// ps> cloudflared.exe tunnel --url http://localhost:8000
+const API_BASE = "https://drives-comedy-strange-stewart.trycloudflare.com";
 
 // 서버 오류를 상태 코드와 함께 전달하기 위한 오류 클래스
 class ApiError extends Error {
