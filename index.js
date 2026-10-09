@@ -17,9 +17,7 @@ const IMAGE_LIST = [
   { name: "flower.jpg", src: "images/flower.jpg" },
   { name: "carbon.jpg", src: "images/carbon.jpg" },
   { name: "traffic.jpg", src: "images/traffic.jpg" },
-  { name: "traffic2.jpg", src: "images/traffic2.jpg" },
   { name: "track_left.jpg", src: "images/track_left.jpg" },
-  { name: "track_right.jpg", src: "images/track_right.jpg" },
 ];
 
 const CONFIG = {
@@ -27,8 +25,9 @@ const CONFIG = {
   stepDelay: 0, // 단계 사이 연출용 지연(ms). 0이면 즉시 표시한다.
 };
 
-const PROPOSED_FILTERS = ["WMM_II", "Recursive_WMM_II", "Recursive_TWMF"]; // 시간이 많이 소요되는 함수
-let proposedFilterIndex = 0; //2번째를 초기값으로 선택
+const PROPOSED_FILTERS = ["WMM_II", "Recursive_WMM_II", "Recursive_TWMF"]; // 4번째화면 필터함수.추가등록해서 사용가능함
+let proposedFilterIndex = 0; //1번째를 초기값으로 선택
+
 /* =========================================================
  * 2. 상태 및 화면 요소
  * ========================================================= */
@@ -232,7 +231,7 @@ function resetStages(canvasEls) {
 }
 
 /* =========================================================
- * 4. 사이드 목록버튼 선택시 실행 : 목록 -> 원본 -> 필터1,2,3
+ * 4. 사이드 목록버튼 선택시 실행 : 목록 -> 원본 -> Noise -> 필터1,2,3,... 순서로 실행
  * ========================================================= */
 
 async function selectItem(i) {
@@ -256,7 +255,7 @@ async function selectItem(i) {
 }
 
 /* =========================================================
- * 7. 목록 렌더링
+ * 5. 목록 렌더링
  * ========================================================= */
 //state = {name(파일명 또는 이미지번호), src(파일경로)}
 function renderList() {
@@ -284,7 +283,7 @@ async function getItemImageData(item) {
 }
 
 /* =========================================================
- * 8. 원본파일 캔버스에 그리기
+ * 6. 원본파일 캔버스에 그리기
  * ========================================================= */
 async function drawOriginal(item) {
   // 상태설정
@@ -310,23 +309,14 @@ async function drawOriginal(item) {
   await sleep(CONFIG.stepDelay);
 }
 
-// server request 회신결과 json형태
-//{
-//   "width": w,
-//   "height": h,
-//   "original": { "image": to_data_url(img) },
-//   "noisy": { "image": to_data_url(noisy), "ms": round(t_noise, 1) },
-//   "conventional": { "image": to_data_url(conv), "ms": round(t_conv, 1) },
-//   "proposed": { "image": to_data_url(prop), "ms": round(t_prop, 1) },
-// }
-
 let currentRequest = null;
 let proposedRequest = null;
 let proposedRequest2 = null;
 let noise_result, filter_result;
 
 /* =========================================================
- *  9. 서버로 이미지를 보내서 필터처리후 필터처리된 이미지 회신받아서 캔버스 그리기
+ *  7. 서버로 이미지를 보내서 노이즈처리 및 회신받고,
+ *     이어서 노이즈된 사진을 서버전송하여 필터처리후 이미지 회신받아서 캔버스 그리기
  * ========================================================= */
 async function runPipelineRemote(item) {
   const myRun = ++state.runId;
@@ -380,7 +370,7 @@ async function runPipelineRemote(item) {
       "done",
     );
 
-    //wmm_ii or recursive_twmf 필터처리하기
+    //wmm_ii , recursive_wmm .. , recursive_twmf 필터처리하기
     filter_result = await postProcessFilter(noiseImgBlob, cleanImgBlob, {
       filename: item.name,
       signal: currentRequest.signal,

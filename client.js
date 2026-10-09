@@ -104,13 +104,19 @@ export async function postProcessFilter(
   // 첫번째인자 'file_noise'은 서버의 매개변수 이름과 같아야 한다
   form.append("file_noise", image, image.name || filename);
 
+  // 두번째 클린이미지 등록
   if (imageClean !== undefined && imageClean !== null) {
     form.append("file_clean", imageClean, imageClean.name || filenameClean);
   }
+
+  // 세번째 노이즈강도 등록
   form.append("noise_strength", String(noiseStrength)); // 반드시 문자열로
+
+  // 네번째 필터유형 등록
   if (proposedFilter !== undefined) {
     form.append("proposed_filter", proposedFilter);
   }
+
   // 시간 초과와 외부 취소를 하나의 AbortController로 합친다
   const controller = new AbortController();
   const timer = setTimeout(
