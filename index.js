@@ -2,7 +2,7 @@
 import {
   postProcessNoise,
   postProcessFilter,
-  postFilter_smf33,
+  postFilter_hybrid,
 } from "./client.js";
 
 /* =========================================================
@@ -13,20 +13,27 @@ import {
 // 주의: file:// 로 열면 브라우저 보안 정책 때문에 픽셀을 읽을 수 없으므로
 //       로컬 서버(VS Code Live Server)로 실행해야 한다.
 const IMAGE_LIST = [
-  { name: "white_tree.jpg", src: "images/white_tree.jpg" },
-  { name: "flower.jpg", src: "images/flower.jpg" },
-  { name: "carbon.jpg", src: "images/carbon.jpg" },
+  { name: "zebra.png", src: "images/zebra.png" },
+  { name: "peacock.png", src: "images/peacock.png" },
+  { name: "butterfly.png", src: "images/butterfly.png" },
+  { name: "pung_big.png", src: "images/pung_big.png" },
   { name: "traffic.jpg", src: "images/traffic.jpg" },
-  { name: "track_left.jpg", src: "images/track_left.jpg" },
 ];
 
 const CONFIG = {
-  maxSize: 256, // 처리 해상도 상한(긴 변 기준, px). 필터 연산량에 맞춰 조정한다.
+  maxSize: 1024, // 처리 해상도 상한(긴 변 기준, px). 필터 연산량에 맞춰 조정한다.
   stepDelay: 0, // 단계 사이 연출용 지연(ms). 0이면 즉시 표시한다.
 };
 
-const PROPOSED_FILTERS = ["WMM_II", "Recursive_WMM_II", "Recursive_TWMF"]; // 4번째화면 필터함수.추가등록해서 사용가능함
+const PROPOSED_FILTERS = [
+  "SMF_33",
+  "WMM_II",
+  "Recursive_WMM_II",
+  "Recursive_TWMF",
+]; // 4번째화면 필터함수.추가등록해서 사용가능함
 let proposedFilterIndex = 0; //1번째를 초기값으로 선택
+const CONVENTION_FILTERS = ["hybrid", "hv2"]; //, "hybrid_slow"]; // 4번째화면 필터함수.추가등록해서 사용가능함
+let conventionFilterIndex = 1; //2번째를 초기값으로 선택
 
 /* =========================================================
  * 2. 상태 및 화면 요소
@@ -38,6 +45,7 @@ const els = {
   fullscreen: document.getElementById("fullscreenBtn"),
   noiseStrength: document.getElementById("noiseStrength"),
   proposedToggle: document.getElementById("proposedToggle"),
+  conventionToggle: document.getElementById("conventionToggle"),
 
   canvas: {
     original: document.getElementById("cv-original"),
@@ -217,6 +225,14 @@ function setStatus(key, text, kind) {
     } else {
       els.proposedToggle.disabled = false;
     }
+
+  if (key === "conventional")
+    if (kind === "busy") {
+      els.conventionToggle.disabled = true;
+    } else {
+      els.conventionToggle.disabled = false;
+    }
+
   //spinner 실행여부 토글
   el.closest(".stage").classList.toggle("busy", kind === "busy"); // 추가
 }
@@ -338,7 +354,9 @@ async function runPipelineRemote(item) {
   try {
     //등록된 img파일 blob형태로 변경후 서버전송준비를 한다
     cleanImgBlob = await itemToBlob(item);
-    const noiseStrength = Number(els.noiseStrength.value);
+    let noisenum = Number(els.noiseStrength.value);
+    const noiseStrength = Math.max(0, Math.min(99, noisenum));
+    els.noiseStrength.value = noiseStrength;
 
     //노이지이미지생성
     noise_result = await postProcessNoise(cleanImgBlob, {
@@ -354,32 +372,35 @@ async function runPipelineRemote(item) {
 
     noiseImgBlob = await dataUrlToBlob(noise_result["noisy"].image);
 
-    //필터처리하기
-    //smf_3x3 필터처리하기
-    filter_result = await postFilter_smf33(noiseImgBlob, {
-      filename: item.name,
-      signal: currentRequest.signal,
-    });
-    await drawDataUrl(
-      els.canvas["conventional"],
-      filter_result["conventional"].image,
-    );
-    setStatus(
-      "conventional",
-      `완료 · ${filter_result["conventional"].ms} ms`,
-      "done",
-    );
-
     //wmm_ii , recursive_wmm .. , recursive_twmf 필터처리하기
     filter_result = await postProcessFilter(noiseImgBlob, cleanImgBlob, {
       filename: item.name,
       signal: currentRequest.signal,
       noiseStrength,
       proposedFilter: getProposedFilterName(),
+      conventionFilter: CONVENTION_FILTERS[conventionFilterIndex],
+      runMode: "all",
     });
 
+    //4번째 화면
     await drawDataUrl(els.canvas["proposed"], filter_result["proposed"].image);
-    setStatus("proposed", `완료 · ${filter_result["proposed"].ms} ms`, "done");
+    setStatus(
+      "proposed",
+      `psnr: ${filter_result["proposed"].psnr}dB, ${filter_result["proposed"].ms} ms`,
+      "done",
+    );
+
+    //3번째화면. conventional 이미지 그리기
+    await drawDataUrl(
+      els.canvas["conventional"],
+      filter_result["conventional"].image,
+    );
+
+    setStatus(
+      "conventional",
+      `psnr: ${filter_result["conventional"].psnr}dB, ${filter_result["conventional"].ms} ms`,
+      "done",
+    );
   } catch (err) {
     if (err.name === "AbortError" || !alive()) return;
     keys.forEach((k) => setStatus(k, "오류"));
@@ -392,18 +413,20 @@ async function runPipelineRemote(item) {
 }
 
 /* =========================================================
- *   서버에서 필터처리된 이미지 회신받아서 캔버스 그리기
+ *   4번째 화면에서 토글버튼 클릭시 실행 : 필터1,2,3,... 순서로 실행
  * ========================================================= */
 async function runToggleFilterRemote() {
   proposedRequest?.abort();
   proposedRequest = new AbortController();
-  proposedRequest2?.abort();
-  proposedRequest2 = new AbortController();
+  //proposedRequest2?.abort();
+  //proposedRequest2 = new AbortController();
 
   clearCanvas(els.canvas.proposed);
   setStatus("proposed", "서버 처리 중", "busy");
 
-  const noiseStrength = Number(els.noiseStrength.value);
+  let noisenum = Number(els.noiseStrength.value);
+  const noiseStrength = Math.max(0, Math.min(99, noisenum));
+  els.noiseStrength.value = noiseStrength;
 
   try {
     if (noiseImgBlob === null)
@@ -411,30 +434,71 @@ async function runToggleFilterRemote() {
 
     const currentFilter = getProposedFilterName();
 
-    if (currentFilter === "WMM_II") {
-      filter_result = await postProcessFilter(noiseImgBlob, cleanImgBlob, {
-        filename: "noisy.png",
-        filenameClean: "clean.png",
-        proposedFilter: currentFilter,
-        signal: proposedRequest.signal,
-      });
-      //recursive_twmf, recursive_wmmii ..
-    } else {
-      filter_result = await postProcessFilter(noiseImgBlob, null, {
-        filename: "noisy.png",
-        filenameClean: "clean.png",
-        proposedFilter: currentFilter,
-        signal: proposedRequest2.signal,
-        noiseStrength,
-      });
-    }
+    filter_result = await postProcessFilter(noiseImgBlob, cleanImgBlob, {
+      filename: "noisy.png",
+      filenameClean: "clean.png",
+      proposedFilter: currentFilter,
+      signal: proposedRequest.signal,
+      noiseStrength,
+      runMode: "prop",
+    });
+
     await drawDataUrl(els.canvas.proposed, filter_result.proposed.image);
-    setStatus("proposed", `완료 · ${filter_result.proposed.ms} ms`, "done");
+    setStatus(
+      "proposed",
+      `psnr: ${filter_result["proposed"].psnr}dB, ${filter_result["proposed"].ms} ms`,
+      "done",
+    );
+
     els.proposedToggle.disable = false;
   } catch (err) {
     console.log("err abort - index 373");
     if (err.name === "AbortError") return;
     setStatus("proposed", "오류");
+    console.error(err);
+  } finally {
+  }
+}
+
+//convention 창만 결과값 받아서 다시그리기
+
+async function runToggleConventionFilterRemote() {
+  //proposedRequest?.abort();
+  //proposedRequest = new AbortController();
+  proposedRequest2?.abort();
+  proposedRequest2 = new AbortController();
+
+  clearCanvas(els.canvas.conventional);
+  setStatus("conventional", "서버 처리 중", "busy");
+
+  try {
+    if (noiseImgBlob === null)
+      noiseImgBlob = await canvasToBlob(els.canvas.noisy);
+
+    const currentFilter = CONVENTION_FILTERS[conventionFilterIndex];
+
+    filter_result = await postProcessFilter(noiseImgBlob, cleanImgBlob, {
+      filename: "noisy.png",
+      filenameClean: "clean.png",
+      conventionFilter: currentFilter,
+      signal: proposedRequest2.signal,
+      runMode: "conv",
+    });
+
+    await drawDataUrl(
+      els.canvas["conventional"],
+      filter_result["conventional"].image,
+    );
+    setStatus(
+      "conventional",
+      `psnr: ${filter_result["conventional"].psnr}dB, ${filter_result["conventional"].ms} ms`,
+      "done",
+    );
+    els.conventionToggle.disable = false;
+  } catch (err) {
+    console.log("err abort - index 373");
+    if (err.name === "AbortError") return;
+    setStatus("conventional", "오류");
     console.error(err);
   } finally {
   }
@@ -495,11 +559,34 @@ els.proposedToggle.addEventListener("click", async () => {
 
   await runToggleFilterRemote();
 });
+
+els.conventionToggle.addEventListener("click", async () => {
+  const el = els.status["conventional"];
+  if (el.dataset.state === "busy") return;
+
+  conventionFilterIndex =
+    (conventionFilterIndex + 1) % CONVENTION_FILTERS.length;
+  els.conventionToggle.textContent = CONVENTION_FILTERS[conventionFilterIndex];
+
+  // 오른쪽 아래 칸에 아직 그릴 원본(노이즈 이미지)이 없다면 여기서 끝
+  if (els.canvas.noisy.classList.contains("empty")) return;
+
+  //버튼잠금
+  els.conventionToggle.disabled = true;
+
+  await runToggleConventionFilterRemote();
+});
 /* =========================================================
  * 10. 초기화
  * ========================================================= */
 
 (function init() {
   state.items = IMAGE_LIST.map((x) => ({ ...x }));
+
+  //시작화면 기본값 설정
+  els.noiseStrength.value = 50;
+  els.proposedToggle.textContent = PROPOSED_FILTERS[proposedFilterIndex];
+  els.conventionToggle.textContent = CONVENTION_FILTERS[conventionFilterIndex];
+
   renderList();
 })();

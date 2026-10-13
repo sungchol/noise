@@ -47,13 +47,14 @@
           <span class="step">2</span>
           <h2>노이즈</h2>
           <span>강도</span>
-          <select id="noiseStrength">
+          <!--<select id="noiseStrength">
             <option value="10" selected>10</option>
             <option value="30">30</option>
             <option value="50">50</option>
             <option value="70">70</option>
             <option value="80">80</option>
-          </select>
+          </select>-->
+          <input id="noiseStrength" type="text" />
           <span></span>
           <span class="status" id="st-noisy">대기</span>
         </header>
@@ -66,7 +67,17 @@
       <section class="stage" data-area="conventional">
         <header>
           <span class="step">3</span>
-          <h2>SMF_3x3</h2>
+          <h2>
+            <button
+              type="button"
+              id="conventionToggle"
+              class="filter-toggle"
+              aria-live="polite"
+            >
+              Hybrid_Filter
+            </button>
+          </h2>
+
           <span class="status" id="st-conventional">대기</span>
         </header>
         <div class="view">

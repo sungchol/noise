@@ -97,6 +97,8 @@ export async function postProcessFilter(
     signal,
     noiseStrength = 10,
     proposedFilter = "WMM_II",
+    conventionFilter = "hybrid",
+    runMode = "prop",
   } = {},
 ) {
   const form = new FormData();
@@ -115,6 +117,14 @@ export async function postProcessFilter(
   // 네번째 필터유형 등록
   if (proposedFilter !== undefined) {
     form.append("proposed_filter", proposedFilter);
+  }
+
+  // 3번창 추가필터유형 등록
+  form.append("convention_filter", conventionFilter);
+
+  // 다섯번째 필터유형 등록
+  if (runMode !== undefined) {
+    form.append("run_mode", runMode);
   }
 
   // 시간 초과와 외부 취소를 하나의 AbortController로 합친다
@@ -167,16 +177,31 @@ export async function postProcessFilter(
   }
 }
 
-////////////////////SMF33 호출함수////////////////////////////////////////
-// endpoint == /process/filter_smf33
-export async function postFilter_smf33(
+////////////////////filer_hybrid 호출함수////////////////////////////////////////
+// endpoint == /process/filter_hybrid
+export async function postFilter_hybrid(
   image,
-  { filename = "image.png", timeoutMs = 60000, signal } = {},
+  imageClean,
+  {
+    filename = "image.png",
+    filenameClean = "clean.png",
+    timeoutMs = 600000,
+    signal,
+    conventionFilter = "hybrid",
+  } = {},
 ) {
   const form = new FormData();
 
   // append 첫번째 인자 'file'은 서버의 매개변수 이름과 같아야 한다
   form.append("file", image, image.name || filename);
+
+  // 두번째 클린이미지 등록
+  if (imageClean !== undefined && imageClean !== null) {
+    form.append("file_clean", imageClean, imageClean.name || filenameClean);
+  }
+
+  // 3번창 추가필터유형 등록
+  form.append("convention_filter", conventionFilter);
 
   // 시간 초과와 외부 취소를 하나의 AbortController로 합친다
   const controller = new AbortController();
@@ -194,7 +219,7 @@ export async function postFilter_smf33(
   try {
     // Content-Type 헤더는 지정하지 않는다 (브라우저가 boundary 포함해 자동 설정)
     // 서버에 그림파일보내서 결과회신받기
-    const res = await fetch(API_BASE + "/process/filter_smf33", {
+    const res = await fetch(API_BASE + "/process/filter_hybrid", {
       method: "POST",
       body: form,
       signal: controller.signal,
